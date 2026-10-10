@@ -332,6 +332,7 @@ if(fine&&!reduce){
   ];
 
   let selectedSymbol = 'XAUUSD';
+  let selectedInterval = 'M5';
   let chart = null;
   let candlestickSeries = null;
   
@@ -342,7 +343,83 @@ if(fine&&!reduce){
   const statDot = document.getElementById('mw-status-dot');
   const statText = document.getElementById('mw-status-text');
   
-  // Render Watchlist
+  function initChart() {
+    if (chart) return;
+    const container = document.getElementById('mw-chart-container');
+    chart = LightweightCharts.createChart(container, {
+      layout: { background: { type: 'solid', color: 'transparent' }, textColor: '#8b94a8' },
+      grid: { vertLines: { color: 'rgba(255,255,255,0.05)' }, horzLines: { color: 'rgba(255,255,255,0.05)' } },
+      crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+      timeScale: { borderColor: 'rgba(255,255,255,0.1)' },
+      rightPriceScale: { borderColor: 'rgba(255,255,255,0.1)' }
+    });
+    candlestickSeries = chart.addCandlestickSeries({
+      upColor: '#3d8bff', downColor: '#e3e9f7', borderVisible: false, wickUpColor: '#3d8bff', wickDownColor: '#e3e9f7'
+    });
+    
+    new ResizeObserver(() => {
+      chart.applyOptions({ width: container.clientWidth, height: container.clientHeight });
+    }).observe(container);
+  }
+
+  async function fetchWatchlist() {
+    try {
+      const res = await fetch('/api/market?action=watchlist');
+      const data = await res.json();
+      
+      // Update symbols
+      symbols.forEach(sym => {
+        let tdKey = sym.id;
+        if (tdKey.length === 6 && !tdKey.includes('US30') && !tdKey.includes('NAS')) {
+            tdKey = tdKey.substring(0,3) + '/' + tdKey.substring(3,6);
+        }
+        if (tdKey === 'US30') tdKey = 'DJI';
+        if (tdKey === 'NAS100') tdKey = 'IXIC';
+
+        const quote = data[tdKey];
+        if (quote && quote.close) {
+          sym.price = parseFloat(quote.close);
+          sym.change = parseFloat(quote.change);
+          sym.pct = parseFloat(quote.percent_change);
+          sym.high = parseFloat(quote.high);
+          sym.low = parseFloat(quote.low);
+        }
+      });
+      renderWatchlist(search.value);
+      updateDetailPanel();
+      
+      statDot.className = 'w-2.5 h-2.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]';
+      statText.textContent = 'Live Data Active';
+      overlay.style.opacity = '0';
+      setTimeout(() => overlay.style.display = 'none', 300);
+    } catch (e) {
+      console.error('Watchlist fetch error:', e);
+    }
+  }
+
+  async function fetchTimeSeries() {
+    try {
+      const res = await fetch(`/api/market?action=timeseries&symbol=${selectedSymbol}&interval=${selectedInterval}`);
+      const data = await res.json();
+      
+      if (data.values && candlestickSeries) {
+        // TwelveData returns descending order, lightweight charts needs ascending
+        const chartData = data.values.map(v => ({
+          time: new Date(v.datetime).getTime() / 1000,
+          open: parseFloat(v.open),
+          high: parseFloat(v.high),
+          low: parseFloat(v.low),
+          close: parseFloat(v.close)
+        })).sort((a,b) => a.time - b.time);
+        
+        candlestickSeries.setData(chartData);
+        chart.timeScale().fitContent();
+      }
+    } catch (e) {
+      console.error('Timeseries fetch error:', e);
+    }
+  }
+  
   function renderWatchlist(filter = '') {
     if(!tbody) return;
     tbody.innerHTML = '';
@@ -377,36 +454,75 @@ if(fine&&!reduce){
     });
   }
 
-  function selectSymbol(id) {
-    selectedSymbol = id;
-    renderWatchlist(search.value);
-    
-    // Update detail panel
-    const sym = symbols.find(s => s.id === id);
+  function updateDetailPanel() {
+    const sym = symbols.find(s => s.id === selectedSymbol);
     if(sym) {
       document.getElementById('mw-detail-sym').textContent = sym.id;
       document.getElementById('mw-detail-sym').nextElementSibling.textContent = sym.name;
+      
+      const p = document.getElementById('mw-detail-price');
+      const c = document.getElementById('mw-detail-change');
+      const h = document.getElementById('mw-detail-high');
+      const l = document.getElementById('mw-detail-low');
+      
+      if (sym.price !== null) {
+        const d = sym.id.includes('JPY') ? 3 : 2;
+        p.textContent = sym.price.toFixed(d);
+        h.textContent = sym.high.toFixed(d);
+        l.textContent = sym.low.toFixed(d);
+        const isUp = sym.change > 0;
+        c.textContent = `${isUp?'+':''}${sym.change.toFixed(d)} (${sym.pct.toFixed(2)}%)`;
+        c.className = `text-sm font-medium ${isUp ? 'text-green-400' : 'text-red-400'}`;
+      }
     }
   }
 
-  // Initial render (shows empty/unavailable state)
-  renderWatchlist();
-  
+  function selectSymbol(id) {
+    selectedSymbol = id;
+    renderWatchlist(search.value);
+    updateDetailPanel();
+    fetchTimeSeries();
+  }
+
+  // Bind events
   if(search) {
     search.addEventListener('input', (e) => renderWatchlist(e.target.value));
   }
+  
+  const refreshBtn = document.getElementById('mw-refresh');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', () => {
+      refreshBtn.style.opacity = '0.5';
+      Promise.all([fetchWatchlist(), fetchTimeSeries()]).then(() => {
+        refreshBtn.style.opacity = '1';
+      });
+    });
+  }
 
-  // Timeframe buttons
   document.querySelectorAll('.mw-tf').forEach(btn => {
     btn.addEventListener('click', (e) => {
       document.querySelectorAll('.mw-tf').forEach(b => {
         b.className = 'mw-tf px-3 py-1 text-sm rounded-lg hover:bg-[rgba(255,255,255,.1)] transition-colors text-[var(--mut)]';
       });
       e.target.className = 'mw-tf px-3 py-1 text-sm rounded-lg bg-[rgba(74,168,255,.15)] text-[var(--cyan)] border border-[rgba(74,168,255,.3)]';
+      selectedInterval = e.target.getAttribute('data-tf');
+      fetchTimeSeries();
     });
   });
 
+  // Initial load
+  renderWatchlist();
+  initChart();
+  fetchWatchlist().then(fetchTimeSeries);
+  
+  // Refresh data every 1 minute
+  setInterval(() => {
+    fetchWatchlist();
+    fetchTimeSeries();
+  }, 60000);
+
 })();
+
 
 
 // THREE scene
