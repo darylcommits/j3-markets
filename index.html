@@ -10,6 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
 <style>
 :root{--bg:#04050a;--ink:#e8ecf5;--mut:#8b94a8;--blue:#1e6fff;--cyan:#4aa8ff;--purple:#7a3cff;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
@@ -35,6 +36,12 @@ input:focus,textarea:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(74
 ::selection{background:var(--blue)}
 .bar{position:fixed;top:0;left:0;height:2px;width:100%;transform-origin:0 50%;transform:scaleX(0);background:linear-gradient(90deg,var(--blue),var(--purple));z-index:60}
 @media (prefers-reduced-motion:reduce){*{animation:none!important}}
+
+.custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
 </style>
 </head>
 <body>
@@ -45,13 +52,13 @@ input:focus,textarea:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(74
   <div class="glass mx-3 sm:mx-6 mt-3 rounded-full px-4 sm:px-6 py-2 flex items-center justify-between">
     <a href="#home" class="flex items-center gap-3"><img src="logo.jpg" alt="J3 Markets logo" class="w-10 h-10 rounded-full object-cover"><span class="font-bold tracking-widest text-sm hidden sm:block">J3 MARKETS</span></a>
     <div class="nav hidden md:flex gap-9 text-sm">
-      <a href="#home" class="on">Home</a><a href="#services">Services</a><a href="#about">About Us</a><a href="#contact">Contact Us</a>
+      <a href="#home" class="on">Home</a><a href="#market-watch">Market Watch</a><a href="#services">Services</a><a href="#about">About Us</a><a href="#contact">Contact Us</a>
     </div>
     <a href="https://discord.gg/jKgcXSPKD" target="_blank" class="btn btn-p !py-2 !px-5 text-sm hidden md:inline-flex">Join Discord</a>
     <button id="burger" class="md:hidden p-2" aria-label="Menu"><svg width="24" height="24" fill="none" stroke="#fff" stroke-width="2"><path d="M4 8h16M4 16h16"/></svg></button>
   </div>
   <div id="mnav" class="glass hidden md:hidden mx-3 mt-2 rounded-3xl p-5 flex-col gap-4 text-lg">
-    <a href="#home">Home</a><a href="#services">Services</a><a href="#about">About Us</a><a href="#contact">Contact Us</a>
+    <a href="#home">Home</a><a href="#market-watch">Market Watch</a><a href="#services">Services</a><a href="#about">About Us</a><a href="#contact">Contact Us</a>
   </div>
 </nav>
 
@@ -64,6 +71,115 @@ input:focus,textarea:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(74
       <div class="h-in mt-10 flex flex-wrap gap-4"><a href="#services" class="btn btn-p mag">Explore the Program →</a><a href="#contact" class="btn btn-g mag">Contact Us</a></div>
     </div>
     <div class="absolute bottom-8 left-1/2 -translate-x-1/2 text-xs tracking-[.3em] text-[var(--mut)] h-in hidden sm:block">SCROLL</div>
+  </section>
+
+  
+  <section id="market-watch" class="px-6 sm:px-12 lg:px-24 py-28 relative z-10">
+    <div class="max-w-7xl mx-auto">
+      <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+        <div>
+          <p class="eyebrow rv">Market Watch</p>
+          <h2 class="rv text-4xl sm:text-5xl font-bold mt-3">Live <span class="grad">Markets.</span></h2>
+          <p class="rv mt-4 text-[var(--mut)] text-lg max-w-2xl">Monitor essential forex and commodity instruments. Prioritizing XAUUSD (Gold) on the M5 timeframe for the J3 Markets system.</p>
+        </div>
+        <div class="flex items-center gap-4 rv">
+          <div class="text-right">
+            <p class="text-xs text-[var(--mut)] uppercase tracking-wider mb-1">Market Status</p>
+            <div class="flex items-center gap-2 justify-end">
+              <span id="mw-status-dot" class="w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]"></span>
+              <span id="mw-status-text" class="text-sm font-medium">Data Unavailable</span>
+            </div>
+          </div>
+          <button id="mw-refresh" class="w-10 h-10 rounded-xl bg-[rgba(255,255,255,.05)] border border-[rgba(140,170,255,.2)] flex items-center justify-center hover:bg-[rgba(255,255,255,.1)] transition-colors" aria-label="Refresh Data">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="grid xl:grid-cols-3 gap-8">
+        <!-- Watchlist Table -->
+        <div class="xl:col-span-1 glass rounded-3xl p-6 flex flex-col h-[600px] rv">
+          <div class="relative mb-5">
+            <input id="mw-search" type="text" placeholder="Search symbol..." class="w-full bg-[rgba(0,0,0,.2)] border border-[rgba(140,170,255,.15)] rounded-xl px-4 py-2.5 pl-10 text-sm focus:border-[var(--cyan)] transition-colors outline-none">
+            <svg class="absolute left-3.5 top-3 text-[var(--mut)]" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          </div>
+          
+          <div class="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+            <table class="w-full text-left text-sm border-collapse">
+              <thead class="sticky top-0 bg-[var(--bg)]/90 backdrop-blur-md z-10">
+                <tr>
+                  <th class="py-3 px-2 font-medium text-[var(--mut)] border-b border-[rgba(255,255,255,.05)]">Symbol</th>
+                  <th class="py-3 px-2 font-medium text-[var(--mut)] border-b border-[rgba(255,255,255,.05)] text-right">Price</th>
+                  <th class="py-3 px-2 font-medium text-[var(--mut)] border-b border-[rgba(255,255,255,.05)] text-right">Change</th>
+                </tr>
+              </thead>
+              <tbody id="mw-tbody">
+                <!-- Skeletons generated by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Detail Panel & Chart -->
+        <div class="xl:col-span-2 glass rounded-3xl p-6 flex flex-col h-[600px] rv relative overflow-hidden">
+          
+          <!-- Data Unavailable Overlay -->
+          <div id="mw-overlay" class="absolute inset-0 bg-[var(--bg)]/80 backdrop-blur-sm z-20 flex flex-col items-center justify-center p-8 text-center transition-opacity duration-300">
+            <div class="w-16 h-16 mb-4 rounded-full bg-[rgba(239,68,68,0.1)] flex items-center justify-center text-red-400 border border-red-500/20">
+              <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            </div>
+            <h3 class="text-xl font-bold mb-2">Live Data Provider Not Configured</h3>
+            <p class="text-[var(--mut)] mb-6 max-w-md">The Market Watch feature requires a configured data provider (e.g., Tickmill MT5 Bridge or a supported financial API) to display live XAUUSD prices and historical candles.</p>
+            <div class="bg-[rgba(0,0,0,.3)] border border-[rgba(255,255,255,.05)] p-4 rounded-xl text-left text-sm max-w-lg w-full">
+              <p class="font-medium text-white mb-2">Required Configuration:</p>
+              <ul class="list-disc pl-5 space-y-1 text-[var(--mut)] font-mono text-xs">
+                <li>MARKET_API_URL = "your_bridge_endpoint"</li>
+                <li>MARKET_API_KEY = "your_secret_key"</li>
+                <li>PROVIDER_TYPE = "mt5_bridge" | "twelvedata"</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap gap-6 items-start justify-between mb-6">
+            <div>
+              <div class="flex items-center gap-3">
+                <h3 id="mw-detail-sym" class="text-2xl font-bold">XAUUSD</h3>
+                <span class="px-2 py-0.5 rounded text-xs font-medium bg-[rgba(255,255,255,.1)] text-[var(--mut)]">Gold / US Dollar</span>
+              </div>
+              <div class="mt-2 flex items-baseline gap-3">
+                <span id="mw-detail-price" class="text-3xl font-bold font-mono tracking-tight text-white">--</span>
+                <span id="mw-detail-change" class="text-sm font-medium">--</span>
+              </div>
+            </div>
+            
+            <div class="flex gap-4">
+              <div class="bg-[rgba(255,255,255,.03)] border border-[rgba(255,255,255,.05)] rounded-xl px-4 py-2">
+                <p class="text-xs text-[var(--mut)] uppercase mb-0.5">High</p>
+                <p id="mw-detail-high" class="font-mono text-sm">--</p>
+              </div>
+              <div class="bg-[rgba(255,255,255,.03)] border border-[rgba(255,255,255,.05)] rounded-xl px-4 py-2">
+                <p class="text-xs text-[var(--mut)] uppercase mb-0.5">Low</p>
+                <p id="mw-detail-low" class="font-mono text-sm">--</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 mb-4 overflow-x-auto pb-2 custom-scrollbar">
+            <button class="mw-tf px-3 py-1 text-sm rounded-lg hover:bg-[rgba(255,255,255,.1)] transition-colors text-[var(--mut)]" data-tf="M1">M1</button>
+            <button class="mw-tf px-3 py-1 text-sm rounded-lg bg-[rgba(74,168,255,.15)] text-[var(--cyan)] border border-[rgba(74,168,255,.3)]" data-tf="M5">M5</button>
+            <button class="mw-tf px-3 py-1 text-sm rounded-lg hover:bg-[rgba(255,255,255,.1)] transition-colors text-[var(--mut)]" data-tf="M15">M15</button>
+            <button class="mw-tf px-3 py-1 text-sm rounded-lg hover:bg-[rgba(255,255,255,.1)] transition-colors text-[var(--mut)]" data-tf="M30">M30</button>
+            <button class="mw-tf px-3 py-1 text-sm rounded-lg hover:bg-[rgba(255,255,255,.1)] transition-colors text-[var(--mut)]" data-tf="H1">H1</button>
+            <button class="mw-tf px-3 py-1 text-sm rounded-lg hover:bg-[rgba(255,255,255,.1)] transition-colors text-[var(--mut)]" data-tf="H4">H4</button>
+            <button class="mw-tf px-3 py-1 text-sm rounded-lg hover:bg-[rgba(255,255,255,.1)] transition-colors text-[var(--mut)]" data-tf="D1">D1</button>
+          </div>
+
+          <div id="mw-chart-container" class="flex-1 w-full bg-[rgba(0,0,0,.2)] border border-[rgba(255,255,255,.05)] rounded-xl overflow-hidden relative">
+            <!-- Chart will be injected here if provider exists -->
+          </div>
+        </div>
+      </div>
+    </div>
   </section>
 
   <section id="services" class="px-6 sm:px-12 lg:px-24 py-28">
@@ -123,9 +239,21 @@ input:focus,textarea:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(74
         </div>
       </div>
       <div id="cf" class="grid gap-4">
-        <input id="n" placeholder="Your name" aria-label="Name"><input id="e" type="email" placeholder="Email address" aria-label="Email">
-        <textarea id="m" rows="4" placeholder="Your message" aria-label="Message"></textarea>
-        <button id="send" class="btn btn-p mag justify-center">Send Message</button>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="flex flex-col gap-1.5">
+                <label for="n" class="text-sm font-medium text-[var(--mut)] ml-1">Full Name</label>
+                <input id="n" placeholder="e.g. John Doe" aria-label="Name">
+            </div>
+            <div class="flex flex-col gap-1.5">
+                <label for="e" class="text-sm font-medium text-[var(--mut)] ml-1">Email Address</label>
+                <input id="e" type="email" placeholder="e.g. john@example.com" aria-label="Email">
+            </div>
+        </div>
+        <div class="flex flex-col gap-1.5">
+            <label for="m" class="text-sm font-medium text-[var(--mut)] ml-1">Your Message</label>
+            <textarea id="m" rows="4" placeholder="Tell us about your trading experience..." aria-label="Message"></textarea>
+        </div>
+        <button id="send" class="btn btn-p mag justify-center mt-2">Send Message</button>
         <p id="ok" class="text-sm text-[var(--cyan)] h-5"></p>
       </div>
     </div>
@@ -135,7 +263,7 @@ input:focus,textarea:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(74
 <footer class="px-6 sm:px-12 lg:px-24 pb-10 pt-6 text-sm text-[var(--mut)]">
   <div class="border-t border-white/10 pt-8 flex flex-col md:flex-row gap-6 justify-between">
     <div class="flex items-center gap-3"><img src="logo.jpg" alt="" class="w-9 h-9 rounded-full"><span>© <span id="y"></span> J3 Markets. AI Powered. Data Driven. Results.</span></div>
-    <div class="flex gap-6"><a href="#home">Home</a><a href="#services">Services</a><a href="#about">About Us</a><a href="#contact">Contact Us</a></div>
+    <div class="flex gap-6"><a href="#home">Home</a><a href="#market-watch">Market Watch</a><a href="#services">Services</a><a href="#about">About Us</a><a href="#contact">Contact Us</a></div>
   </div>
   <p class="mt-6 max-w-4xl text-xs opacity-70">Risk warning: Forex and leveraged trading carry a high level of risk and may not be suitable for all investors. Content is educational only and is not financial advice. Past performance does not guarantee future results.</p>
 </footer>
@@ -190,6 +318,96 @@ if(fine&&!reduce){
   b.addEventListener('mouseleave',()=>b.style.transform='');
  });
 }
+
+
+// Market Watch Logic
+(function(){
+  const symbols = [
+    { id: 'XAUUSD', name: 'Gold / US Dollar', price: null, change: null, pct: null, high: null, low: null },
+    { id: 'EURUSD', name: 'Euro / US Dollar', price: null, change: null, pct: null, high: null, low: null },
+    { id: 'GBPUSD', name: 'British Pound / US Dollar', price: null, change: null, pct: null, high: null, low: null },
+    { id: 'USDJPY', name: 'US Dollar / Japanese Yen', price: null, change: null, pct: null, high: null, low: null },
+    { id: 'US30', name: 'Dow Jones Industrial', price: null, change: null, pct: null, high: null, low: null },
+    { id: 'NAS100', name: 'NASDAQ 100', price: null, change: null, pct: null, high: null, low: null }
+  ];
+
+  let selectedSymbol = 'XAUUSD';
+  let chart = null;
+  let candlestickSeries = null;
+  
+  // DOM Elements
+  const tbody = document.getElementById('mw-tbody');
+  const search = document.getElementById('mw-search');
+  const overlay = document.getElementById('mw-overlay');
+  const statDot = document.getElementById('mw-status-dot');
+  const statText = document.getElementById('mw-status-text');
+  
+  // Render Watchlist
+  function renderWatchlist(filter = '') {
+    if(!tbody) return;
+    tbody.innerHTML = '';
+    const filtered = symbols.filter(s => s.id.toLowerCase().includes(filter.toLowerCase()) || s.name.toLowerCase().includes(filter.toLowerCase()));
+    
+    if(filtered.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="3" class="py-4 text-center text-[var(--mut)] text-sm">No instruments found.</td></tr>';
+      return;
+    }
+
+    filtered.forEach(sym => {
+      const isUp = sym.change > 0;
+      const isDown = sym.change < 0;
+      const colorCls = isUp ? 'text-green-400' : (isDown ? 'text-red-400' : 'text-[var(--mut)]');
+      const tr = document.createElement('tr');
+      tr.className = `cursor-pointer hover:bg-[rgba(255,255,255,.02)] transition-colors ${selectedSymbol === sym.id ? 'bg-[rgba(255,255,255,.04)]' : ''}`;
+      tr.onclick = () => selectSymbol(sym.id);
+      
+      tr.innerHTML = `
+        <td class="py-3 px-2 border-b border-[rgba(255,255,255,.02)]">
+          <div class="font-bold text-white">${sym.id}</div>
+          <div class="text-xs text-[var(--mut)] whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px]">${sym.name}</div>
+        </td>
+        <td class="py-3 px-2 border-b border-[rgba(255,255,255,.02)] text-right font-mono ${sym.price === null ? 'opacity-30' : 'text-white'}">
+          ${sym.price !== null ? sym.price.toFixed(sym.id.includes('JPY') ? 3 : 2) : '---'}
+        </td>
+        <td class="py-3 px-2 border-b border-[rgba(255,255,255,.02)] text-right font-mono ${sym.price === null ? 'opacity-30' : colorCls}">
+          ${sym.change !== null ? (isUp?'+':'')+sym.pct.toFixed(2)+'%' : '---'}
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function selectSymbol(id) {
+    selectedSymbol = id;
+    renderWatchlist(search.value);
+    
+    // Update detail panel
+    const sym = symbols.find(s => s.id === id);
+    if(sym) {
+      document.getElementById('mw-detail-sym').textContent = sym.id;
+      document.getElementById('mw-detail-sym').nextElementSibling.textContent = sym.name;
+    }
+  }
+
+  // Initial render (shows empty/unavailable state)
+  renderWatchlist();
+  
+  if(search) {
+    search.addEventListener('input', (e) => renderWatchlist(e.target.value));
+  }
+
+  // Timeframe buttons
+  document.querySelectorAll('.mw-tf').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      document.querySelectorAll('.mw-tf').forEach(b => {
+        b.className = 'mw-tf px-3 py-1 text-sm rounded-lg hover:bg-[rgba(255,255,255,.1)] transition-colors text-[var(--mut)]';
+      });
+      e.target.className = 'mw-tf px-3 py-1 text-sm rounded-lg bg-[rgba(74,168,255,.15)] text-[var(--cyan)] border border-[rgba(74,168,255,.3)]';
+    });
+  });
+
+})();
+
 
 // THREE scene
 (function(){
